@@ -242,11 +242,10 @@ Before installing the project, make sure you have:
 ## 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/music-library-server.git
-cd music-library-server
+git clone https://github.com/A-AssiL/music-library.git
+cd music-library
 ```
 
-Replace `YOUR_USERNAME` with your GitHub username.
 
 ---
 
