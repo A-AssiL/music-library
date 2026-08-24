@@ -691,8 +691,8 @@ Contributions, bug reports, and suggestions are welcome.
 ### Fork the project
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/music-library-server.git
-cd music-library-server
+git clone https://github.com/A-AssiL/music-library.git
+cd music-library
 ```
 
 Create a branch:
