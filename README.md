@@ -1,120 +1,102 @@
-# 🎵 Music Library Server
+# 🎵 Music Library
 
-> A self-hosted personal music streaming server built with **FastAPI** and **Vanilla JavaScript**.
+> A self-hosted personal music streaming server + YouTube downloader.
+> Built with **FastAPI**, **Vanilla JavaScript**, and packaged as a **Windows desktop app**.
 
-Music Library Server lets you build your own private music collection and access it through a modern web interface from your computer, phone, tablet, or other devices on your network.
+Music Library lets you build your own private music collection, download audio from YouTube, and stream it through a modern web interface — from your PC, phone, or tablet on your local network.
 
-Upload your own MP3 / M4A / WEBM files, download audio from YouTube, manage your library, create playlists, mark favourites, search your collection, and stream your music directly from your browser.
+**No FFmpeg. No winget. One-click launch.**
 
 ---
 
 ## ✨ Features
 
 ### 🎧 Music Player
-
-* Play music directly from the browser
-* Custom progress bar
-* Click or drag to seek through a track
-* Previous / next track
-* Play / pause
-* Shuffle mode
-* Repeat mode
-* Volume control
-* Keyboard shortcuts
-* Automatic playback of the next track
-* HTTP Range request support for efficient audio streaming
+- Play music directly in the browser or desktop window
+- Custom progress bar with click-to-seek and drag-to-seek
+- Previous / next track
+- Play / pause
+- Shuffle mode (with visual feedback)
+- Repeat mode — Repeat One with distinct icon 🔂
+- Volume control
+- Automatic playback of the next track
+- HTTP Range request support for efficient streaming
 
 ### 📚 Music Library
-
-* Upload **MP3**, **M4A**, and **WEBM** files
-* Browse your entire collection
-* Search by title, artist, or album
-* Sort by title, artist, date added, or duration
-* Display track duration
-* Display library statistics
-* Download individual tracks to your device
-* Delete tracks
+- Upload **MP3**, **M4A**, and **WEBM** files
+- Browse your entire collection
+- Search by title or artist
+- Sort by title, artist, date added, or duration
+- Display track duration
+- Download individual tracks to your device
+- Delete tracks
+- **Automatic cover art** from YouTube thumbnails
 
 ### 📥 YouTube Audio Download
-
-Paste a YouTube URL and download the audio directly through the server.
-
-The backend uses **`yt-dlp` only** — no FFmpeg required.
-
-* Downloads the best available audio stream as `.m4a` or `.webm`
-* Automatically adds the track to your library
-* Supports custom title and artist before download
-* Works with most public YouTube videos
-
-> **Note:** YouTube changes its format system frequently. If a download fails, run `pip install -U yt-dlp` and try again.
-
-> **Important:** Only download or store content you have the legal right to download and use. Respect copyright and the terms applicable to the content and service you use.
+- Paste a YouTube URL, download the audio directly through the server
+- **No FFmpeg needed** — saves as `.m4a` or `.webm`
+- Automatic cover image from YouTube
+- Custom title and artist before download
+- Handles YouTube playlist URLs (`&list=...`) by extracting only the video
 
 ### ❤️ Favorites
-
-Mark tracks as favourites and quickly access the music you listen to most.
-
-Favorites are stored locally in the browser using `localStorage`.
+- Mark tracks as favourites
+- Stored locally in browser `localStorage`
+- Dedicated Favorites page
 
 ### 📋 Playlists
-
-Create your own playlists and organize your music.
-
-* Create playlists
-* Rename playlists
-* Delete playlists
-* Add tracks to playlists
-* Remove tracks from playlists
-* Switch between playlists
-
-Playlist information is stored in browser `localStorage`.
+- **Elegant modal** to add tracks to any playlist
+- **Create new playlists** directly from the modal
+- **Dedicated playlist pages** with:
+  - Hero banner showing cover, name, track count, total duration
+  - ▶ Play All / 🔀 Shuffle / 🗑️ Delete buttons
+  - Full track list with remove button
+- Playlists stored in browser `localStorage`
 
 ### 🌙 Dark / Light Mode
-
-Switch between dark and light themes.
-
-Your preference is saved locally and restored automatically when you return.
+- Toggle between themes
+- Preference saved and restored automatically
 
 ### 📱 Responsive Interface
+- Works on desktop, laptop, phone, and tablet
+- Sidebar collapses to a hamburger menu on mobile
+- Same interface accessible from phone via Wi-Fi
 
-The interface is designed to work across:
-
-* 🖥️ Desktop
-* 💻 Laptop
-* 📱 Smartphone
-* 📲 Tablet
-
-The layout adapts to smaller screens automatically.
-
-### 📊 Library Statistics
-
-The dashboard provides information such as:
-
-* Total number of tracks
-* Total library size
-* Total playing time
-* Number of artists
+### 🖥️ Desktop App
+- **Native window** using PyWebView — no browser tabs
+- **Single `.exe`** built with PyInstaller — double-click to launch
+- **No black terminal window**
+- **No Python installation required** on the user's machine
 
 ---
 
-# 🖥️ Screenshots
-
-Add screenshots of your application here.
+## 🏗️ Architecture
 
 ```text
-docs/
-└── screenshots/
-    ├── dashboard.png
-    ├── player.png
-    ├── mobile.png
-    └── playlist.png
-
-
-
-
-
-
-the base(the magic) thing :
-
-
-pip install -U yt-dlp
+              ┌──────────────────────────┐
+              │   MusicLibrary.exe       │
+              │   (PyInstaller bundle)   │
+              └────────────┬─────────────┘
+                           │
+              ┌────────────▼─────────────┐
+              │      launcher.py         │
+              │  (starts server + window)│
+              └────────────┬─────────────┘
+                           │
+        ┌──────────────────┼──────────────────┐
+        ▼                  ▼                  ▼
+   ┌─────────┐      ┌────────────┐      ┌───────────┐
+   │ FastAPI │      │  PyWebView │      │  Static   │
+   │ main.py │      │   window   │      │ HTML/CSS  │
+   │         │      │            │      │    /JS    │
+   └────┬────┘      └────────────┘      └───────────┘
+        │
+        ├── /tracks
+        ├── /stream/{id}
+        ├── /upload
+        ├── /download          (yt-dlp)
+        ├── /download-file/{id}
+        ├── /search
+        ├── /stats
+        ├── /debug-formats
+        └── /web
