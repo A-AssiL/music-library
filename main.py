@@ -22,12 +22,44 @@ import yt_dlp
 # CONFIGURATION
 # ============================================
 
-BASE_DIR = Path(__file__).parent.absolute()
-LIBRARY_DIR = BASE_DIR / "library"
-STATIC_DIR = BASE_DIR / "static"
-TEMP_DIR = BASE_DIR / "temp_downloads"
+import sys
+
+def _resolve_dirs():
+    """
+    Returns (READ_DIR, WRITE_DIR).
+
+    READ_DIR  = where static/ lives (inside PyInstaller bundle when frozen)
+    WRITE_DIR = where library/, metadata.json, temp_downloads/ live
+                (always beside the exe so user data survives updates)
+    """
+    if getattr(sys, "frozen", False):
+        # Running as PyInstaller exe
+        exe_dir = Path(sys.executable).parent
+
+        # PyInstaller 6.x onedir mode: bundled files go into _internal/
+        bundled = exe_dir / "_internal"
+        read_dir = bundled if bundled.exists() else exe_dir
+
+        write_dir = exe_dir
+        return read_dir, write_dir
+
+    # Running from source
+    base = Path(__file__).parent.absolute()
+    return base, base
+
+
+READ_DIR, WRITE_DIR = _resolve_dirs()
+
+# Read-only bundled resources
+STATIC_DIR = READ_DIR / "static"
+
+# Writable user data (next to exe so it persists)
+LIBRARY_DIR = WRITE_DIR / "library"
+TEMP_DIR = WRITE_DIR / "temp_downloads"
 METADATA_FILE = LIBRARY_DIR / "metadata.json"
 
+# Keep BASE_DIR for backwards compatibility
+BASE_DIR = WRITE_DIR
 ALLOWED_EXTENSIONS = {".mp3", ".m4a", ".webm", ".opus", ".ogg"}
 
 LIBRARY_DIR.mkdir(exist_ok=True)

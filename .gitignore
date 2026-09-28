@@ -7,3 +7,6 @@ library/
 venv/
 __pycache__/
 ffmpeg/
+launcher.log
+dist/
+build/
