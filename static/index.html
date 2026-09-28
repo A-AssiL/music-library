@@ -49,10 +49,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 .track-card:hover{transform:translateY(-6px);}
 .track-card .artwork{width:100%;aspect-ratio:1/1;background:var(--accent-gradient);
   display:flex;align-items:center;justify-content:center;font-size:2.8rem;color:#fff;
-  position:relative;}
+  position:relative;overflow:hidden;}
+.track-card .artwork img{width:100%;height:100%;object-fit:cover;display:block;}
 .track-card .artwork .play-overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);
   display:flex;align-items:center;justify-content:center;opacity:0;transition:.25s;
-  font-size:3rem;color:#fff;}
+  font-size:3rem;color:#fff;z-index:2;}
 .track-card:hover .artwork .play-overlay{opacity:1;}
 .track-card .info{padding:12px 14px 14px;}
 .track-card .title{font-weight:600;font-size:.95rem;white-space:nowrap;
@@ -73,6 +74,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 .player-bar .artwork{width:52px;height:52px;border-radius:10px;background:var(--accent-gradient);
   flex-shrink:0;display:flex;align-items:center;justify-content:center;
   font-size:1.6rem;color:#fff;overflow:hidden;}
+.player-bar .artwork img{width:100%;height:100%;object-fit:cover;display:block;}
 .player-bar .track-info{flex:1;min-width:120px;overflow:hidden;}
 .player-bar .track-info .title{font-weight:600;font-size:.95rem;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -136,14 +138,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
 
 <aside class="sidebar" id="sidebar">
   <div class="logo">🎵 Library Pro</div>
-
   <div class="stats">
     <div class="stat-row"><span class="label">Tracks</span><span class="value" id="statTracks">0</span></div>
     <div class="stat-row"><span class="label">Size</span><span class="value" id="statSize">0 MB</span></div>
     <div class="stat-row"><span class="label">Duration</span><span class="value" id="statDuration">0 hrs</span></div>
     <div class="stat-row"><span class="label">Artists</span><span class="value" id="statArtists">0</span></div>
   </div>
-
   <div class="quick-actions">
     <button class="btn btn-primary" onclick="openUpload()">📤 Upload Audio</button>
     <button class="btn btn-success" onclick="openYoutube()">📥 YouTube Download</button>
@@ -172,7 +172,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   <div class="track-grid" id="trackGrid"></div>
 </main>
 
-<!-- Upload Modal -->
 <div class="upload-overlay" id="uploadModal">
   <div class="modal">
     <button class="close-btn" onclick="closeModal('uploadModal')">✕</button>
@@ -190,13 +189,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   </div>
 </div>
 
-<!-- YouTube Modal -->
 <div class="upload-overlay" id="youtubeModal">
   <div class="modal">
     <button class="close-btn" onclick="closeModal('youtubeModal')">✕</button>
     <h3>📥 YouTube Download</h3>
     <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:12px;">
-      Paste a YouTube URL. The audio will be saved as .m4a or .webm (no FFmpeg needed).
+      Paste a YouTube URL. Audio saved as .m4a or .webm (no FFmpeg needed).
     </p>
     <div class="field">
       <label>YouTube URL *</label>
@@ -209,7 +207,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
   </div>
 </div>
 
-<!-- Player -->
 <div class="player-bar" id="playerBar">
   <div class="artwork" id="playerArtwork">🎵</div>
   <div class="track-info">
@@ -295,6 +292,35 @@ async function loadStats() {
 // ---- Render ----
 function esc(t){ const d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
 
+function makeArtwork(t) {
+  // Returns a DOM element for the artwork area
+  const wrap = document.createElement('div');
+  wrap.className = 'artwork';
+
+  const letter = (t.title || '🎵').charAt(0).toUpperCase();
+
+  if (t.thumbnail) {
+    const img = document.createElement('img');
+    img.alt = '';
+    img.loading = 'lazy';
+    img.src = t.thumbnail;
+    img.onerror = function() {
+      img.remove();
+      wrap.insertAdjacentText('afterbegin', letter);
+    };
+    wrap.appendChild(img);
+  } else {
+    wrap.textContent = letter;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'play-overlay';
+  overlay.textContent = '▶';
+  wrap.appendChild(overlay);
+
+  return wrap;
+}
+
 function render() {
   const q = $('searchInput').value.toLowerCase().trim();
   const sort = $('sortSelect').value;
@@ -312,34 +338,80 @@ function render() {
     return new Date(b.added_date) - new Date(a.added_date);
   });
 
+  // Clear grid
+  trackGrid.innerHTML = '';
+
   if (!list.length) {
-    trackGrid.innerHTML = '<div class="empty-state"><span class="emoji">🎵</span><p>No tracks yet. Upload or download from YouTube.</p></div>';
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = '<span class="emoji">🎵</span><p>No tracks yet. Upload or download from YouTube.</p>';
+    trackGrid.appendChild(empty);
     return;
   }
 
-  trackGrid.innerHTML = list.map(t => {
-    const dur = t.duration ? `${Math.floor(t.duration/60)}:${String(t.duration%60).padStart(2,'0')}` : '--:--';
+  for (const t of list) {
+    const dur = t.duration
+      ? `${Math.floor(t.duration/60)}:${String(t.duration%60).padStart(2,'0')}`
+      : '--:--';
     const fav = favorites.includes(t.id);
-    return `
-      <div class="track-card" onclick="playTrack('${t.id}')">
-        <div class="artwork">🎵<div class="play-overlay">▶</div></div>
-        <div class="info">
-          <div class="title">${esc(t.title)}</div>
-          <div class="artist">${esc(t.artist)}</div>
-          <div class="bottom">
-            <span class="duration">${dur}</span>
-            <div>
-              <button class="card-btn ${fav?'fav':''}"
-                onclick="event.stopPropagation(); toggleFav('${t.id}')">${fav?'❤️':'🤍'}</button>
-              <button class="card-btn" title="Download"
-                onclick="event.stopPropagation(); downloadFile('${t.id}')">⬇️</button>
-              <button class="card-btn" title="Delete"
-                onclick="event.stopPropagation(); deleteTrack('${t.id}')">🗑️</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
+
+    const card = document.createElement('div');
+    card.className = 'track-card';
+    card.onclick = () => playTrack(t.id);
+
+    // Artwork
+    card.appendChild(makeArtwork(t));
+
+    // Info
+    const info = document.createElement('div');
+    info.className = 'info';
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'title';
+    titleEl.textContent = t.title;
+    info.appendChild(titleEl);
+
+    const artistEl = document.createElement('div');
+    artistEl.className = 'artist';
+    artistEl.textContent = t.artist;
+    info.appendChild(artistEl);
+
+    const bottom = document.createElement('div');
+    bottom.className = 'bottom';
+
+    const durEl = document.createElement('span');
+    durEl.className = 'duration';
+    durEl.textContent = dur;
+    bottom.appendChild(durEl);
+
+    const btnWrap = document.createElement('div');
+
+    const favBtn = document.createElement('button');
+    favBtn.className = 'card-btn' + (fav ? ' fav' : '');
+    favBtn.textContent = fav ? '❤️' : '🤍';
+    favBtn.onclick = (e) => { e.stopPropagation(); toggleFav(t.id); };
+    btnWrap.appendChild(favBtn);
+
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'card-btn';
+    dlBtn.title = 'Download';
+    dlBtn.textContent = '⬇️';
+    dlBtn.onclick = (e) => { e.stopPropagation(); downloadFile(t.id); };
+    btnWrap.appendChild(dlBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'card-btn';
+    delBtn.title = 'Delete';
+    delBtn.textContent = '🗑️';
+    delBtn.onclick = (e) => { e.stopPropagation(); deleteTrack(t.id); };
+    btnWrap.appendChild(delBtn);
+
+    bottom.appendChild(btnWrap);
+    info.appendChild(bottom);
+    card.appendChild(info);
+
+    trackGrid.appendChild(card);
+  }
 }
 
 function toggleFav(id) {
@@ -466,7 +538,25 @@ function playTrack(id) {
   audio.play().catch(()=>{});
   $('playerTitle').textContent = t.title;
   $('playerArtist').textContent = t.artist;
-  $('playerArtwork').textContent = (t.title.charAt(0) || '🎵').toUpperCase();
+
+  // Player artwork (built with DOM to avoid escaping bugs)
+  const pa = $('playerArtwork');
+  pa.innerHTML = '';
+  const letter = (t.title || '🎵').charAt(0).toUpperCase();
+
+  if (t.thumbnail) {
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = t.thumbnail;
+    img.onerror = function() {
+      img.remove();
+      pa.textContent = letter;
+    };
+    pa.appendChild(img);
+  } else {
+    pa.textContent = letter;
+  }
+
   playerBar.style.display = 'flex';
   render();
 }
@@ -485,6 +575,7 @@ audio.onended = () => {
 };
 audio.onplay = () => $('playBtn').textContent = '⏸';
 audio.onpause = () => $('playBtn').textContent = '▶️';
+audio.onerror = (e) => console.error('Audio error:', e);
 
 function fmt(s){ if(!s||isNaN(s)) return '0:00';
   return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
@@ -540,12 +631,10 @@ $('repeatBtn').onclick = () => {
 };
 $('volumeSlider').oninput = () => audio.volume = $('volumeSlider').value / 100;
 
-// ---- Events ----
 $('searchInput').oninput = render;
 $('sortSelect').onchange = render;
 $('filterSelect').onchange = render;
 
-// ---- Init ----
 loadLibrary();
 </script>
 </body>

@@ -2,6 +2,7 @@ import json
 import re
 import mimetypes
 import shutil
+import traceback
 from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
@@ -27,7 +28,7 @@ STATIC_DIR = BASE_DIR / "static"
 TEMP_DIR = BASE_DIR / "temp_downloads"
 METADATA_FILE = LIBRARY_DIR / "metadata.json"
 
-ALLOWED_EXTENSIONS = {".mp3", ".m4a", ".webm"}
+ALLOWED_EXTENSIONS = {".mp3", ".m4a", ".webm", ".opus", ".ogg"}
 
 LIBRARY_DIR.mkdir(exist_ok=True)
 STATIC_DIR.mkdir(exist_ok=True)
@@ -41,7 +42,7 @@ TEMP_DIR.mkdir(exist_ok=True)
 app = FastAPI(
     title="Music Library Server",
     description="Library + YouTube downloader (no FFmpeg needed)",
-    version="2.0.0",
+    version="2.4.0",
 )
 
 app.add_middleware(
@@ -68,6 +69,7 @@ class MusicTrack(BaseModel):
     file_size: int
     added_date: str
     source_url: Optional[str] = None
+    thumbnail: Optional[str] = None
 
 
 class DownloadRequest(BaseModel):
@@ -202,6 +204,7 @@ async def upload_local_file(
             "file_size": size,
             "added_date": datetime.now().isoformat(),
             "source_url": None,
+            "thumbnail": None,
         }
 
         if ext == ".mp3":
@@ -220,33 +223,59 @@ async def upload_local_file(
         return {"success": True, "message": f"Uploaded: {base_title}", "track": track}
 
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(500, str(e))
-
 
 # ---------- YOUTUBE DOWNLOAD ----------
 
 @app.post("/download")
 async def download_from_youtube(req: DownloadRequest):
+    # A valid URL must start with http
     if not req.url or not req.url.startswith("http"):
         raise HTTPException(400, "Invalid URL")
+
+    # --- FIX: Clean the URL to extract only the video ID ---
+    # This prevents yt-dlp from ever seeing a playlist parameter.
+    from urllib.parse import urlparse, parse_qs
+    try:
+        parsed = urlparse(req.url)
+        qs = parse_qs(parsed.query)
+        video_id = qs.get("v", [None])[0]
+        # Handle short youtu.be URLs
+        if not video_id and parsed.netloc == "youtu.be":
+            video_id = parsed.path.lstrip("/")
+        
+        if video_id:
+            clean_url = f"https://www.youtube.com/watch?v={video_id}"
+            print(f"DEBUG cleaned URL: {clean_url}")
+            req.url = clean_url
+    except Exception:
+        pass # If it fails, proceed with the original URL
+    # --- End of fix ---
 
     temp_dir = TEMP_DIR / datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     temp_dir.mkdir(parents=True, exist_ok=True)
 
+    # ... (your debug probe code can stay here) ...
+
     ydl_opts = {
-        # single audio stream only - no merging, no FFmpeg
         "format": "bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio",
         "outtmpl": str(temp_dir / "%(title)s.%(ext)s"),
+        "restrictfilenames": True,
         "quiet": True,
         "no_warnings": True,
-        "noplaylist": True,
+        # --- FIX: Tell yt-dlp to ignore any playlist in the URL ---
+        "noplaylist": True, 
         "ignoreerrors": False,
+        "nocheckcertificate": True,
+        "retries": 20,
+        "fragment_retries": 20,
+        "socket_timeout": 60,
     }
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(req.url, download=True)
-
         if not info:
             raise Exception("Could not extract video info")
 
@@ -254,14 +283,21 @@ async def download_from_youtube(req: DownloadRequest):
         uploader = info.get("uploader") or "Unknown Artist"
         album = info.get("album") or info.get("title", "")
         year = str(info.get("upload_date", ""))[:4] or None
+        thumbnail = info.get("thumbnail")
 
-        # find the downloaded file
+        # ---- Find the downloaded file ----
+        all_files = [p for p in temp_dir.iterdir() if p.is_file()]
+        print("DEBUG temp_dir contents:", [p.name for p in all_files])
+
         downloaded = [
-            p for p in temp_dir.iterdir()
-            if p.is_file() and p.suffix.lower() in ALLOWED_EXTENSIONS
+            p for p in all_files
+            if p.suffix.lower() in ALLOWED_EXTENSIONS
         ]
         if not downloaded:
-            raise Exception("No audio file was downloaded")
+            raise Exception(
+                f"No audio file was downloaded. Files in temp: "
+                f"{[p.name for p in all_files]}"
+            )
 
         src = downloaded[0]
         ext = src.suffix.lower()
@@ -287,6 +323,7 @@ async def download_from_youtube(req: DownloadRequest):
             "file_size": size,
             "added_date": datetime.now().isoformat(),
             "source_url": req.url,
+            "thumbnail": thumbnail,
         }
 
         if ext == ".mp3":
@@ -309,9 +346,36 @@ async def download_from_youtube(req: DownloadRequest):
         }
 
     except Exception as e:
-        raise HTTPException(500, f"Download failed: {e}")
+        traceback.print_exc()
+        raise HTTPException(500, f"Download failed: {type(e).__name__}: {e}")
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+# ---------- DEBUG: LIST FORMATS ----------
+
+@app.get("/debug-formats")
+async def debug_formats(url: str):
+    """List available formats for a YouTube URL (for debugging)."""
+    try:
+        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+        formats = [
+            {
+                "format_id": f.get("format_id"),
+                "ext": f.get("ext"),
+                "acodec": f.get("acodec"),
+                "vcodec": f.get("vcodec"),
+                "abr": f.get("abr"),
+                "protocol": f.get("protocol"),
+                "note": f.get("format_note"),
+            }
+            for f in info.get("formats", [])
+        ]
+        return {"title": info.get("title"), "formats": formats}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(500, str(e))
 
 
 # ---------- STREAM ----------
