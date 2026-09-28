@@ -1,641 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Music Library Pro</title>
-<style>
-:root {
-  --bg-body:#f4f6fa; --bg-card:#fff; --bg-input:#f0f2f5;
-  --text-primary:#1e1e2f; --text-secondary:#4a4a5a; --text-muted:#8888a0;
-  --border-color:#e0e4ec; --radius:16px; --accent:#6c5ce7;
-  --accent-gradient:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-  --player-bg:#fff; --shadow:0 8px 24px rgba(0,0,0,0.06);
-}
-body.dark {
-  --bg-body:#12121a; --bg-card:#222233; --bg-input:#2a2a3a;
-  --text-primary:#eeeef4; --text-secondary:#bbbbc8; --text-muted:#6a6a80;
-  --border-color:#3a3a4a; --player-bg:#1a1a26;
-  --shadow:0 8px 24px rgba(0,0,0,0.4);
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  background:var(--bg-body);color:var(--text-primary);display:flex;
-  min-height:100vh;padding-bottom:90px;}
-.sidebar{width:270px;background:var(--bg-card);border-right:1px solid var(--border-color);
-  padding:24px 18px;height:100vh;position:sticky;top:0;overflow-y:auto;flex-shrink:0;}
-.sidebar .logo{font-size:1.7rem;font-weight:700;background:var(--accent-gradient);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px;}
-.sidebar .stats{background:var(--bg-input);border-radius:var(--radius);
-  padding:14px;margin-bottom:20px;font-size:.9rem;}
-.sidebar .stat-row{display:flex;justify-content:space-between;padding:4px 0;}
-.sidebar .stat-row .label{color:var(--text-muted);}
-.sidebar .stat-row .value{font-weight:600;}
-.quick-actions{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
-.main{flex:1;padding:24px 32px;overflow-y:auto;}
-.header{display:flex;justify-content:space-between;align-items:center;
-  flex-wrap:wrap;gap:12px;margin-bottom:24px;}
-.search-box{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.search-box input{padding:10px 18px;border-radius:30px;border:1px solid var(--border-color);
-  background:var(--bg-input);color:var(--text-primary);width:240px;}
-.search-box input:focus{outline:none;border-color:var(--accent);}
-.filter-options select{padding:8px 14px;border-radius:30px;border:1px solid var(--border-color);
-  background:var(--bg-input);color:var(--text-primary);}
-.theme-toggle{background:var(--bg-input);border:1px solid var(--border-color);
-  border-radius:30px;padding:8px 18px;cursor:pointer;color:var(--text-primary);}
-.track-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:20px;}
-.track-card{background:var(--bg-card);border-radius:var(--radius);
-  box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:.2s;}
-.track-card:hover{transform:translateY(-6px);}
-.track-card .artwork{width:100%;aspect-ratio:1/1;background:var(--accent-gradient);
-  display:flex;align-items:center;justify-content:center;font-size:2.8rem;color:#fff;
-  position:relative;overflow:hidden;}
-.track-card .artwork img{width:100%;height:100%;object-fit:cover;display:block;}
-.track-card .artwork .play-overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);
-  display:flex;align-items:center;justify-content:center;opacity:0;transition:.25s;
-  font-size:3rem;color:#fff;z-index:2;}
-.track-card:hover .artwork .play-overlay{opacity:1;}
-.track-card .info{padding:12px 14px 14px;}
-.track-card .title{font-weight:600;font-size:.95rem;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis;}
-.track-card .artist{font-size:.8rem;color:var(--text-secondary);margin:4px 0 6px;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.track-card .bottom{display:flex;justify-content:space-between;align-items:center;}
-.track-card .duration{font-size:.75rem;color:var(--text-muted);}
-.card-btn{background:none;border:none;font-size:1.15rem;cursor:pointer;
-  color:var(--text-muted);margin-left:2px;padding:2px;}
-.card-btn:hover{color:var(--accent);transform:scale(1.15);}
-.card-btn.fav{color:#e74c3c;}
-.empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted);}
-.empty-state .emoji{font-size:3.5rem;display:block;margin-bottom:12px;}
-.player-bar{position:fixed;bottom:0;left:0;right:0;background:var(--player-bg);
-  padding:10px 24px;display:none;align-items:center;gap:16px;flex-wrap:wrap;
-  z-index:999;border-top:1px solid var(--border-color);box-shadow:0 -4px 20px rgba(0,0,0,.08);}
-.player-bar .artwork{width:52px;height:52px;border-radius:10px;background:var(--accent-gradient);
-  flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  font-size:1.6rem;color:#fff;overflow:hidden;}
-.player-bar .artwork img{width:100%;height:100%;object-fit:cover;display:block;}
-.player-bar .track-info{flex:1;min-width:120px;overflow:hidden;}
-.player-bar .track-info .title{font-weight:600;font-size:.95rem;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.player-bar .track-info .artist{font-size:.8rem;color:var(--text-secondary);}
-.player-bar .controls{display:flex;align-items:center;gap:10px;}
-.player-bar .controls button{background:none;border:none;font-size:1.3rem;cursor:pointer;
-  color:var(--text-primary);padding:4px 6px;border-radius:8px;}
-.player-bar .controls button.active{color:var(--accent);}
-.progress-wrap{flex:2;min-width:140px;display:flex;align-items:center;gap:10px;}
-.progress-wrap .time{font-size:.75rem;color:var(--text-muted);min-width:60px;text-align:center;}
-.progress-track{flex:1;height:4px;background:var(--border-color);border-radius:4px;
-  position:relative;cursor:pointer;}
-.progress-fill{height:100%;background:var(--accent-gradient);border-radius:4px;width:0%;}
-.progress-thumb{position:absolute;top:50%;left:0%;transform:translate(-50%,-50%);
-  width:14px;height:14px;background:var(--accent);border-radius:50%;pointer-events:none;}
-.progress-track input[type="range"]{position:absolute;inset:0;opacity:0;
-  cursor:pointer;width:100%;height:100%;margin:0;}
-.volume-wrap{display:flex;align-items:center;gap:6px;}
-.volume-wrap input[type="range"]{width:60px;}
-.btn{padding:10px 20px;border:none;border-radius:30px;font-weight:600;font-size:.9rem;
-  cursor:pointer;color:#fff;display:inline-flex;align-items:center;gap:6px;}
-.btn-primary{background:var(--accent-gradient);}
-.btn-success{background:linear-gradient(135deg,#00b894,#00cec9);}
-.btn-secondary{background:var(--text-muted);}
-.btn-sm{padding:6px 14px;font-size:.8rem;}
-.btn:hover{transform:translateY(-2px);}
-.upload-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
-  z-index:300;align-items:center;justify-content:center;}
-.upload-overlay.active{display:flex;}
-.upload-overlay .modal{background:var(--bg-card);border-radius:var(--radius);
-  padding:32px;max-width:520px;width:92%;max-height:90vh;overflow-y:auto;}
-.upload-overlay .close-btn{float:right;background:none;border:none;font-size:1.5rem;
-  cursor:pointer;color:var(--text-primary);}
-.drop-zone{border:3px dashed var(--border-color);border-radius:var(--radius);
-  padding:36px;text-align:center;margin:16px 0;color:var(--text-muted);cursor:pointer;}
-.drop-zone.dragover{border-color:var(--accent);background:rgba(108,92,231,.08);}
-.field{margin-bottom:10px;}
-.field label{display:block;font-size:.85rem;color:var(--text-muted);margin-bottom:4px;}
-.field input{width:100%;padding:10px 14px;border:1px solid var(--border-color);
-  border-radius:10px;background:var(--bg-input);color:var(--text-primary);font-size:.9rem;}
-.status{margin-top:12px;font-size:.9rem;}
-.status.ok{color:#00b894;}
-.status.err{color:#e74c3c;}
-.status.info{color:var(--accent);}
-.hamburger{display:none;position:fixed;top:16px;left:16px;z-index:150;
-  background:var(--bg-input);border:1px solid var(--border-color);
-  border-radius:30px;padding:6px 14px;font-size:1.2rem;cursor:pointer;color:var(--text-primary);}
-@media(max-width:992px){
-  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);
-    width:280px;height:100vh;z-index:200;transition:.2s;}
-  .sidebar.open{transform:translateX(0);}
-  .main{padding:16px;}
-  .hamburger{display:inline-flex;}
-  .volume-wrap{display:none;}
-}
-</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 Music Library</title>
+<link rel="stylesheet" href="/static/css/main.css">
+<link rel="stylesheet" href="/static/css/layout.css">
+<link rel="stylesheet" href="/static/css/components.css">
 </head>
 <body>
 
-<button class="hamburger" id="hamburgerBtn">☰</button>
-
 <aside class="sidebar" id="sidebar">
-  <div class="logo">🎵 Library Pro</div>
-  <div class="stats">
-    <div class="stat-row"><span class="label">Tracks</span><span class="value" id="statTracks">0</span></div>
-    <div class="stat-row"><span class="label">Size</span><span class="value" id="statSize">0 MB</span></div>
-    <div class="stat-row"><span class="label">Duration</span><span class="value" id="statDuration">0 hrs</span></div>
-    <div class="stat-row"><span class="label">Artists</span><span class="value" id="statArtists">0</span></div>
+  <div class="logo">
+    <span class="logo-mark">🎵</span>
+    <span class="logo-name">Music Library</span>
   </div>
-  <div class="quick-actions">
-    <button class="btn btn-primary" onclick="openUpload()">📤 Upload Audio</button>
-    <button class="btn btn-success" onclick="openYoutube()">📥 YouTube Download</button>
+
+  <nav class="nav">
+    <a class="nav-item" data-view="home" href="#home">
+      <span class="nav-icon">🏠</span><span class="nav-label">Home</span>
+    </a>
+    <a class="nav-item" data-view="songs" href="#songs">
+      <span class="nav-icon">🎵</span><span class="nav-label">All Songs</span>
+    </a>
+    <a class="nav-item" data-view="favorites" href="#favorites">
+      <span class="nav-icon">❤️</span><span class="nav-label">Favorites</span>
+    </a>
+    <a class="nav-item" data-view="playlists" href="#playlists">
+      <span class="nav-icon">📋</span><span class="nav-label">Playlists</span>
+    </a>
+    <a class="nav-item" data-view="youtube" href="#youtube">
+      <span class="nav-icon">📥</span><span class="nav-label">YouTube</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <button class="btn btn-primary full" id="btnUpload">📤 Upload Audio</button>
+    <button class="icon-btn small" id="btnTheme" title="Theme">🌙</button>
   </div>
 </aside>
 
 <main class="main">
-  <div class="header">
-    <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Search tracks..." />
-      <div class="filter-options">
-        <select id="sortSelect">
-          <option value="date">Newest</option>
-          <option value="title">Title</option>
-          <option value="artist">Artist</option>
-          <option value="duration">Duration</option>
-        </select>
-        <select id="filterSelect">
-          <option value="all">All</option>
-          <option value="favorites">Favorites</option>
-        </select>
-      </div>
+  <header class="topbar">
+    <button class="icon-btn hamburger" id="btnMenu">☰</button>
+    <div class="search">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search songs, artists...">
     </div>
-    <button class="theme-toggle" id="themeToggle">🌙 Dark</button>
-  </div>
-  <div class="track-grid" id="trackGrid"></div>
+    <select id="sortSelect" class="select">
+      <option value="date">Newest</option>
+      <option value="title">Title A-Z</option>
+      <option value="artist">Artist A-Z</option>
+      <option value="duration">Duration</option>
+    </select>
+  </header>
+
+  <section class="view" id="view"></section>
 </main>
 
-<div class="upload-overlay" id="uploadModal">
+<div class="player" id="player">
+  <div class="player-art" id="playerArt">🎵</div>
+  <div class="player-meta">
+    <div class="player-title" id="playerTitle">No track playing</div>
+    <div class="player-artist" id="playerArtist">—</div>
+  </div>
+  <div class="player-controls">
+    <button class="icon-btn" id="btnShuffle" title="Shuffle">🔀</button>
+    <button class="icon-btn" id="btnPrev" title="Previous">⏮</button>
+    <button class="icon-btn play" id="btnPlay" title="Play">▶️</button>
+    <button class="icon-btn" id="btnNext" title="Next">⏭</button>
+    <button class="icon-btn" id="btnRepeat" title="Repeat">🔁</button>
+  </div>
+  <div class="player-progress">
+    <span class="time" id="timeNow">0:00</span>
+    <div class="bar" id="bar">
+      <div class="bar-fill" id="barFill"></div>
+      <div class="bar-thumb" id="barThumb"></div>
+      <input type="range" id="barRange" min="0" max="100" value="0" step="0.1">
+    </div>
+    <span class="time" id="timeEnd">0:00</span>
+  </div>
+  <div class="player-volume">
+    <span>🔊</span>
+    <input type="range" id="volumeRange" min="0" max="100" value="80">
+  </div>
+</div>
+
+<!-- Upload modal -->
+<div class="modal-overlay" id="uploadModal">
   <div class="modal">
-    <button class="close-btn" onclick="closeModal('uploadModal')">✕</button>
-    <h3>📤 Upload Audio</h3>
+    <div class="modal-head">
+      <h3>📤 Upload Audio</h3>
+      <button class="icon-btn" data-close="uploadModal">✕</button>
+    </div>
     <div class="drop-zone" id="dropZone">
       <p>📁 Drag & drop MP3 / M4A / WEBM here</p>
-      <p style="font-size:.85rem;margin-top:6px;">or</p>
-      <button class="btn btn-secondary btn-sm" style="margin-top:8px;"
-        onclick="document.getElementById('fileInput').click()">Browse Files</button>
-      <input type="file" id="fileInput" accept=".mp3,.m4a,.webm" multiple style="display:none;" />
+      <p class="dim">or</p>
+      <button class="btn btn-secondary" id="btnBrowse">Browse Files</button>
+      <input type="file" id="fileInput" accept=".mp3,.m4a,.webm" multiple hidden>
     </div>
-    <div class="field"><label>Title (optional)</label><input id="uploadTitle" /></div>
-    <div class="field"><label>Artist (optional)</label><input id="uploadArtist" /></div>
+    <div class="field"><label>Title (optional)</label><input id="uploadTitle"></div>
+    <div class="field"><label>Artist (optional)</label><input id="uploadArtist"></div>
     <div class="status" id="uploadStatus"></div>
   </div>
 </div>
 
-<div class="upload-overlay" id="youtubeModal">
+<!-- Add to playlist modal -->
+<div class="modal-overlay" id="addToPlaylistModal">
   <div class="modal">
-    <button class="close-btn" onclick="closeModal('youtubeModal')">✕</button>
-    <h3>📥 YouTube Download</h3>
-    <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:12px;">
-      Paste a YouTube URL. Audio saved as .m4a or .webm (no FFmpeg needed).
-    </p>
+    <div class="modal-head">
+      <h3>📋 Add to Playlist</h3>
+      <button class="icon-btn" data-close="addToPlaylistModal">✕</button>
+    </div>
+
+    <div class="add-track-preview" id="addTrackPreview"></div>
+
     <div class="field">
-      <label>YouTube URL *</label>
-      <input id="ytUrl" placeholder="https://www.youtube.com/watch?v=..." />
+      <label>Create a new playlist</label>
+      <div class="row-input">
+        <input id="newPlaylistInput" placeholder="Playlist name">
+        <button class="btn btn-primary" id="btnCreatePlaylist">Create</button>
+      </div>
     </div>
-    <div class="field"><label>Custom Title (optional)</label><input id="ytTitle" /></div>
-    <div class="field"><label>Custom Artist (optional)</label><input id="ytArtist" /></div>
-    <button class="btn btn-success" onclick="startYoutubeDownload()">Download</button>
-    <div class="status" id="ytStatus"></div>
+
+    <div class="divider">or pick one below</div>
+
+    <div class="playlist-picker" id="playlistPicker"></div>
   </div>
 </div>
 
-<div class="player-bar" id="playerBar">
-  <div class="artwork" id="playerArtwork">🎵</div>
-  <div class="track-info">
-    <div class="title" id="playerTitle">Title</div>
-    <div class="artist" id="playerArtist">Artist</div>
-  </div>
-  <div class="controls">
-    <button id="shuffleBtn">🔀</button>
-    <button id="prevBtn">⏮</button>
-    <button id="playBtn">▶️</button>
-    <button id="nextBtn">⏭</button>
-    <button id="repeatBtn">🔁</button>
-  </div>
-  <div class="progress-wrap">
-    <span class="time" id="currentTime">0:00</span>
-    <div class="progress-track" id="progressTrack">
-      <div class="progress-fill" id="progressFill"></div>
-      <div class="progress-thumb" id="progressThumb"></div>
-      <input type="range" id="progressSlider" min="0" max="100" value="0" step="0.01" />
+<!-- Create playlist modal -->
+<div class="modal-overlay" id="createPlaylistModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head">
+      <h3>📋 New Playlist</h3>
+      <button class="icon-btn" data-close="createPlaylistModal">✕</button>
     </div>
-    <span class="time" id="totalTime">0:00</span>
-  </div>
-  <div class="volume-wrap">
-    <span>🔊</span>
-    <input type="range" id="volumeSlider" min="0" max="100" value="80" />
+    <div class="field">
+      <label>Playlist name</label>
+      <input id="newPlaylistNameInput" placeholder="e.g. Workout, Chill, Coding">
+    </div>
+    <button class="btn btn-primary full" id="btnConfirmCreatePlaylist">Create Playlist</button>
+    <div class="status" id="createPlaylistStatus"></div>
   </div>
 </div>
 
-<script>
-let tracks = [];
-let currentTrackId = null;
-let audio = new Audio();
-let shuffle = false, repeat = false;
-let favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-let progressUpdating = false;
+<div class="toast" id="toast"></div>
 
-const $ = id => document.getElementById(id);
-const trackGrid = $('trackGrid');
-const playerBar = $('playerBar');
-
-// ---- Theme ----
-let darkMode = localStorage.getItem('darkMode') === 'true';
-if (darkMode) document.body.classList.add('dark');
-updateThemeBtn();
-$('themeToggle').onclick = () => {
-  darkMode = !darkMode;
-  document.body.classList.toggle('dark', darkMode);
-  localStorage.setItem('darkMode', darkMode);
-  updateThemeBtn();
-};
-function updateThemeBtn(){
-  $('themeToggle').textContent = darkMode ? '☀️ Light' : '🌙 Dark';
-}
-
-// ---- Hamburger ----
-$('hamburgerBtn').onclick = () => $('sidebar').classList.toggle('open');
-
-// ---- API ----
-async function api(url, opts = {}) {
-  const r = await fetch(url, opts);
-  return r.json();
-}
-
-// ---- Load ----
-async function loadLibrary() {
-  try {
-    tracks = await api('/tracks');
-    render();
-    loadStats();
-  } catch(e){ console.error(e); }
-}
-
-async function loadStats() {
-  try {
-    const s = await api('/stats');
-    $('statTracks').textContent = s.total_tracks;
-    $('statSize').textContent = s.total_size_mb + ' MB';
-    $('statDuration').textContent = s.total_duration_hours.toFixed(1) + ' hrs';
-    $('statArtists').textContent = s.artists;
-  } catch(e){}
-}
-
-// ---- Render ----
-function esc(t){ const d=document.createElement('div'); d.textContent=t||''; return d.innerHTML; }
-
-function makeArtwork(t) {
-  // Returns a DOM element for the artwork area
-  const wrap = document.createElement('div');
-  wrap.className = 'artwork';
-
-  const letter = (t.title || '🎵').charAt(0).toUpperCase();
-
-  if (t.thumbnail) {
-    const img = document.createElement('img');
-    img.alt = '';
-    img.loading = 'lazy';
-    img.src = t.thumbnail;
-    img.onerror = function() {
-      img.remove();
-      wrap.insertAdjacentText('afterbegin', letter);
-    };
-    wrap.appendChild(img);
-  } else {
-    wrap.textContent = letter;
-  }
-
-  const overlay = document.createElement('div');
-  overlay.className = 'play-overlay';
-  overlay.textContent = '▶';
-  wrap.appendChild(overlay);
-
-  return wrap;
-}
-
-function render() {
-  const q = $('searchInput').value.toLowerCase().trim();
-  const sort = $('sortSelect').value;
-  const filter = $('filterSelect').value;
-
-  let list = tracks.slice();
-  if (q) list = list.filter(t =>
-    t.title.toLowerCase().includes(q) || t.artist.toLowerCase().includes(q));
-  if (filter === 'favorites') list = list.filter(t => favorites.includes(t.id));
-
-  list.sort((a,b) => {
-    if (sort === 'title') return a.title.localeCompare(b.title);
-    if (sort === 'artist') return a.artist.localeCompare(b.artist);
-    if (sort === 'duration') return (a.duration||0)-(b.duration||0);
-    return new Date(b.added_date) - new Date(a.added_date);
-  });
-
-  // Clear grid
-  trackGrid.innerHTML = '';
-
-  if (!list.length) {
-    const empty = document.createElement('div');
-    empty.className = 'empty-state';
-    empty.innerHTML = '<span class="emoji">🎵</span><p>No tracks yet. Upload or download from YouTube.</p>';
-    trackGrid.appendChild(empty);
-    return;
-  }
-
-  for (const t of list) {
-    const dur = t.duration
-      ? `${Math.floor(t.duration/60)}:${String(t.duration%60).padStart(2,'0')}`
-      : '--:--';
-    const fav = favorites.includes(t.id);
-
-    const card = document.createElement('div');
-    card.className = 'track-card';
-    card.onclick = () => playTrack(t.id);
-
-    // Artwork
-    card.appendChild(makeArtwork(t));
-
-    // Info
-    const info = document.createElement('div');
-    info.className = 'info';
-
-    const titleEl = document.createElement('div');
-    titleEl.className = 'title';
-    titleEl.textContent = t.title;
-    info.appendChild(titleEl);
-
-    const artistEl = document.createElement('div');
-    artistEl.className = 'artist';
-    artistEl.textContent = t.artist;
-    info.appendChild(artistEl);
-
-    const bottom = document.createElement('div');
-    bottom.className = 'bottom';
-
-    const durEl = document.createElement('span');
-    durEl.className = 'duration';
-    durEl.textContent = dur;
-    bottom.appendChild(durEl);
-
-    const btnWrap = document.createElement('div');
-
-    const favBtn = document.createElement('button');
-    favBtn.className = 'card-btn' + (fav ? ' fav' : '');
-    favBtn.textContent = fav ? '❤️' : '🤍';
-    favBtn.onclick = (e) => { e.stopPropagation(); toggleFav(t.id); };
-    btnWrap.appendChild(favBtn);
-
-    const dlBtn = document.createElement('button');
-    dlBtn.className = 'card-btn';
-    dlBtn.title = 'Download';
-    dlBtn.textContent = '⬇️';
-    dlBtn.onclick = (e) => { e.stopPropagation(); downloadFile(t.id); };
-    btnWrap.appendChild(dlBtn);
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'card-btn';
-    delBtn.title = 'Delete';
-    delBtn.textContent = '🗑️';
-    delBtn.onclick = (e) => { e.stopPropagation(); deleteTrack(t.id); };
-    btnWrap.appendChild(delBtn);
-
-    bottom.appendChild(btnWrap);
-    info.appendChild(bottom);
-    card.appendChild(info);
-
-    trackGrid.appendChild(card);
-  }
-}
-
-function toggleFav(id) {
-  const i = favorites.indexOf(id);
-  if (i > -1) favorites.splice(i,1); else favorites.push(id);
-  localStorage.setItem('favorites', JSON.stringify(favorites));
-  render();
-}
-
-function downloadFile(id) {
-  window.location.href = '/download-file/' + id;
-}
-
-async function deleteTrack(id) {
-  if (!confirm('Delete this track?')) return;
-  await api('/tracks/' + id, { method: 'DELETE' });
-  loadLibrary();
-}
-
-// ---- Upload ----
-function openUpload(){ $('uploadModal').classList.add('active'); }
-function openYoutube(){ $('youtubeModal').classList.add('active'); }
-function closeModal(id){ $(id).classList.remove('active'); }
-
-const dropZone = $('dropZone');
-const fileInput = $('fileInput');
-dropZone.onclick = () => fileInput.click();
-dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('dragover'); };
-dropZone.ondragleave = () => dropZone.classList.remove('dragover');
-dropZone.ondrop = e => {
-  e.preventDefault(); dropZone.classList.remove('dragover');
-  if (e.dataTransfer.files.length) uploadFiles(e.dataTransfer.files);
-};
-fileInput.onchange = () => {
-  if (fileInput.files.length) uploadFiles(fileInput.files);
-  fileInput.value = '';
-};
-
-async function uploadFiles(files) {
-  const st = $('uploadStatus');
-  for (const file of files) {
-    const n = file.name.toLowerCase();
-    if (!n.endsWith('.mp3') && !n.endsWith('.m4a') && !n.endsWith('.webm')) {
-      st.textContent = '⚠️ Skipping: ' + file.name;
-      st.className = 'status err';
-      continue;
-    }
-    const fd = new FormData();
-    fd.append('file', file);
-    const t = $('uploadTitle').value.trim();
-    const a = $('uploadArtist').value.trim();
-    if (t) fd.append('title', t);
-    if (a) fd.append('artist', a);
-
-    st.textContent = '⏳ Uploading ' + file.name + '...';
-    st.className = 'status info';
-
-    try {
-      const r = await fetch('/upload', { method: 'POST', body: fd });
-      const d = await r.json();
-      if (d.success) {
-        st.textContent = '✅ ' + d.message;
-        st.className = 'status ok';
-        await loadLibrary();
-      } else {
-        st.textContent = '❌ ' + (d.detail || d.message);
-        st.className = 'status err';
-      }
-    } catch(e) {
-      st.textContent = '❌ ' + e.message;
-      st.className = 'status err';
-    }
-  }
-  setTimeout(() => closeModal('uploadModal'), 1200);
-}
-
-// ---- YouTube ----
-async function startYoutubeDownload() {
-  const url = $('ytUrl').value.trim();
-  const title = $('ytTitle').value.trim();
-  const artist = $('ytArtist').value.trim();
-  const st = $('ytStatus');
-
-  if (!url) {
-    st.textContent = '❌ Enter a YouTube URL';
-    st.className = 'status err';
-    return;
-  }
-
-  st.textContent = '⏳ Downloading from YouTube... (this may take a minute)';
-  st.className = 'status info';
-
-  try {
-    const r = await fetch('/download', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, title, artist })
-    });
-    const d = await r.json();
-    if (d.success) {
-      st.textContent = '✅ ' + d.message;
-      st.className = 'status ok';
-      $('ytUrl').value = ''; $('ytTitle').value = ''; $('ytArtist').value = '';
-      await loadLibrary();
-      setTimeout(() => closeModal('youtubeModal'), 1500);
-    } else {
-      st.textContent = '❌ ' + (d.detail || d.message);
-      st.className = 'status err';
-    }
-  } catch(e) {
-    st.textContent = '❌ ' + e.message;
-    st.className = 'status err';
-  }
-}
-
-// ---- Player ----
-function playTrack(id) {
-  const t = tracks.find(x => x.id === id);
-  if (!t) return;
-  if (currentTrackId === id && !audio.paused) { audio.pause(); return; }
-  currentTrackId = id;
-  audio.src = '/stream/' + id;
-  audio.load();
-  audio.play().catch(()=>{});
-  $('playerTitle').textContent = t.title;
-  $('playerArtist').textContent = t.artist;
-
-  // Player artwork (built with DOM to avoid escaping bugs)
-  const pa = $('playerArtwork');
-  pa.innerHTML = '';
-  const letter = (t.title || '🎵').charAt(0).toUpperCase();
-
-  if (t.thumbnail) {
-    const img = document.createElement('img');
-    img.alt = '';
-    img.src = t.thumbnail;
-    img.onerror = function() {
-      img.remove();
-      pa.textContent = letter;
-    };
-    pa.appendChild(img);
-  } else {
-    pa.textContent = letter;
-  }
-
-  playerBar.style.display = 'flex';
-  render();
-}
-
-audio.onloadedmetadata = () => $('totalTime').textContent = fmt(audio.duration);
-audio.ontimeupdate = () => {
-  if (!progressUpdating) {
-    const p = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
-    updateBar(p);
-  }
-  $('currentTime').textContent = fmt(audio.currentTime);
-};
-audio.onended = () => {
-  if (repeat) { audio.currentTime = 0; audio.play(); }
-  else next();
-};
-audio.onplay = () => $('playBtn').textContent = '⏸';
-audio.onpause = () => $('playBtn').textContent = '▶️';
-audio.onerror = (e) => console.error('Audio error:', e);
-
-function fmt(s){ if(!s||isNaN(s)) return '0:00';
-  return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0'); }
-function updateBar(p){ const v=Math.min(100,Math.max(0,p));
-  $('progressFill').style.width = v+'%';
-  $('progressThumb').style.left = v+'%';
-  $('progressSlider').value = v; }
-
-$('progressSlider').oninput = function() {
-  progressUpdating = true;
-  const v = parseFloat(this.value);
-  updateBar(v);
-  if (audio.duration) audio.currentTime = (v/100)*audio.duration;
-  clearTimeout(window._t);
-  window._t = setTimeout(()=>progressUpdating=false, 120);
-};
-$('progressTrack').onclick = function(e) {
-  const r = this.getBoundingClientRect();
-  const p = ((e.clientX - r.left) / r.width) * 100;
-  updateBar(p);
-  if (audio.duration) audio.currentTime = (p/100)*audio.duration;
-};
-
-$('playBtn').onclick = () => {
-  if (!currentTrackId) { if (tracks.length) playTrack(tracks[0].id); return; }
-  audio.paused ? audio.play() : audio.pause();
-};
-$('prevBtn').onclick = () => {
-  if (!currentTrackId) return;
-  const i = tracks.findIndex(t => t.id === currentTrackId);
-  if (i > 0) playTrack(tracks[i-1].id);
-};
-$('nextBtn').onclick = next;
-function next() {
-  if (!currentTrackId || !tracks.length) return;
-  let i = tracks.findIndex(t => t.id === currentTrackId);
-  if (shuffle) {
-    let r; do { r = Math.floor(Math.random()*tracks.length); }
-    while (r === i && tracks.length > 1);
-    playTrack(tracks[r].id);
-  } else {
-    i = (i+1) % tracks.length;
-    playTrack(tracks[i].id);
-  }
-}
-$('shuffleBtn').onclick = () => {
-  shuffle = !shuffle;
-  $('shuffleBtn').classList.toggle('active', shuffle);
-};
-$('repeatBtn').onclick = () => {
-  repeat = !repeat;
-  $('repeatBtn').classList.toggle('active', repeat);
-};
-$('volumeSlider').oninput = () => audio.volume = $('volumeSlider').value / 100;
-
-$('searchInput').oninput = render;
-$('sortSelect').onchange = render;
-$('filterSelect').onchange = render;
-
-loadLibrary();
-</script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/state.js"></script>
+<script src="/static/js/ui.js"></script>
+<script src="/static/js/player.js"></script>
+<script src="/static/js/library.js"></script>
+<script src="/static/js/playlists.js"></script>
+<script src="/static/js/downloader.js"></script>
+<script src="/static/js/upload.js"></script>
+<script src="/static/js/app.js"></script>
 </body>
 </html>
