@@ -1,0 +1,469 @@
+Here is a complete commands reference file. Save it as `COMMANDS.md` in your project root.
+
+```markdown
+# 🎵 Music Library — Commands Reference
+
+> Every command used in this project, organized by task.
+> Copy-paste what you need.
+
+---
+
+## 📋 Table of Contents
+
+1. [First-time setup](#1-first-time-setup)
+2. [Running the app (development)](#2-running-the-app-development)
+3. [Building the desktop .exe](#3-building-the-desktop-exe)
+4. [Daily commands](#4-daily-commands)
+5. [Troubleshooting](#5-troubleshooting)
+6. [Git commands](#6-git-commands)
+7. [Cleanup](#7-cleanup)
+8. [Project paths](#8-project-paths)
+
+---
+
+## 1. First-time setup
+
+### 1.1 Go to the project folder
+
+```powershell
+cd "C:\Users\assil\Desktop\New folder (2)\music-library"
+```
+
+### 1.2 Check Python is installed
+
+```powershell
+python --version
+```
+
+Expected: `Python 3.12.x` or newer.
+
+### 1.3 (Optional) Create a virtual environment
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+```
+
+To deactivate later:
+
+```powershell
+deactivate
+```
+
+### 1.4 Install all dependencies
+
+```powershell
+pip install -r requirements.txt
+```
+
+### 1.5 Install desktop-app tools
+
+```powershell
+pip install pywebview pyinstaller
+```
+
+### 1.6 Update yt-dlp (do this regularly)
+
+```powershell
+pip install -U yt-dlp
+```
+
+---
+
+## 2. Running the app (development)
+
+### 2.1 Run the server only (opens in browser)
+
+```powershell
+python main.py
+```
+
+Then open in your browser:
+
+```
+http://localhost:8000/web
+```
+
+To stop: press **Ctrl + C** in the terminal.
+
+### 2.2 Run as a desktop window (recommended)
+
+```powershell
+python launcher.py
+```
+
+Opens a native window. No browser needed.
+
+To stop: close the window.
+
+### 2.3 Run with auto-reload (for development)
+
+```powershell
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Every time you save a Python file, the server restarts automatically.
+
+### 2.4 Check the API documentation
+
+Open in browser:
+
+```
+http://localhost:8000/docs
+```
+
+or
+
+```
+http://localhost:8000/redoc
+```
+
+### 2.5 Test a YouTube video's available formats
+
+Open in browser:
+
+```
+http://localhost:8000/debug-formats?url=https://youtu.be/VIDEO_ID
+```
+
+Replace `VIDEO_ID` with a real YouTube ID.
+
+---
+
+## 3. Building the desktop .exe
+
+### 3.1 Install PyInstaller (only once)
+
+```powershell
+pip install pyinstaller
+```
+
+### 3.2 Build the app
+
+```powershell
+pyinstaller MusicLibrary.spec --clean
+```
+
+This takes 1–3 minutes.
+
+### 3.3 Find the output
+
+```powershell
+cd dist\MusicLibrary
+dir
+```
+
+You will see:
+
+```
+MusicLibrary.exe
+_internal/
+```
+
+### 3.4 Run the app
+
+Double-click **`MusicLibrary.exe`**.
+
+Or from terminal:
+
+```powershell
+.\MusicLibrary.exe
+```
+
+### 3.5 Rebuild after code changes
+
+```powershell
+cd "C:\Users\assil\Desktop\New folder (2)\music-library"
+pyinstaller MusicLibrary.spec --clean
+```
+
+### 3.6 Build with a custom icon (optional)
+
+1. Put your icon at `assets\icon.ico`
+2. Open `MusicLibrary.spec`
+3. Change `icon=None` to `icon="assets\\icon.ico"`
+4. Rebuild:
+
+```powershell
+pyinstaller MusicLibrary.spec --clean
+```
+
+---
+
+## 4. Daily commands
+
+### 4.1 Start the desktop app
+
+```powershell
+cd "C:\Users\assil\Desktop\New folder (2)\music-library\dist\MusicLibrary"
+.\MusicLibrary.exe
+```
+
+Or just **double-click** `MusicLibrary.exe`.
+
+### 4.2 Update yt-dlp (fix YouTube errors)
+
+```powershell
+pip install -U yt-dlp
+```
+
+Then rebuild if using the exe:
+
+```powershell
+cd "C:\Users\assil\Desktop\New folder (2)\music-library"
+pyinstaller MusicLibrary.spec --clean
+```
+
+### 4.3 Access from your phone (same Wi-Fi)
+
+Find your PC's IP:
+
+```powershell
+ipconfig
+```
+
+Look for **IPv4 Address** (e.g., `192.168.1.4`).
+
+On your phone, open:
+
+```
+http://192.168.1.4:8000/web
+```
+
+---
+
+## 5. Troubleshooting
+
+### 5.1 "Requested format is not available"
+
+```powershell
+pip install -U yt-dlp
+```
+
+Restart the app.
+
+### 5.2 "No audio file was downloaded"
+
+Same fix:
+
+```powershell
+pip install -U yt-dlp
+```
+
+If it persists, check the video's formats:
+
+```
+http://localhost:8000/debug-formats?url=https://youtu.be/VIDEO_ID
+```
+
+### 5.3 "HTTP Error 403: Forbidden"
+
+YouTube is rate-limiting. Wait 5 minutes, then retry.
+
+Or restart your router to get a new IP.
+
+### 5.4 "Create static/index.html" in the .exe
+
+Check that `_internal/static/index.html` exists:
+
+```powershell
+dir "dist\MusicLibrary\_internal\static"
+```
+
+If missing, rebuild:
+
+```powershell
+pyinstaller MusicLibrary.spec --clean
+```
+
+### 5.5 Port 8000 already in use
+
+Find the process:
+
+```powershell
+netstat -ano | findstr :8000
+```
+
+Kill it by PID (replace `12345`):
+
+```powershell
+taskkill /PID 12345 /F
+```
+
+Or just let `launcher.py` pick another port automatically (8001–8100).
+
+### 5.6 launcher.py fails silently
+
+Read the log file:
+
+```powershell
+type launcher.log
+```
+
+or
+
+```powershell
+Get-Content launcher.log -Tail 50
+```
+
+### 5.7 Exe runs but no window appears
+
+Open Task Manager:
+
+```powershell
+taskmgr
+```
+
+Look for `MusicLibrary.exe`. If it's running but no window, something crashed internally. Check `launcher.log` next to the exe.
+
+### 5.8 Audio doesn't play in browser
+
+Open browser Console (F12). Look for red errors.
+
+Common causes:
+- File format not supported by browser
+- File missing from `library/`
+- MIME type not set correctly
+
+### 5.9 Force refresh browser cache
+
+Press **Ctrl + F5** in the browser.
+
+Or clear cache:
+- Chrome/Edge: **Ctrl + Shift + Delete** → clear cached images
+- Or open in Incognito: **Ctrl + Shift + N**
+
+---
+
+## 6. Git commands
+
+### 6.1 Initialize (first time)
+
+```powershell
+git init
+git add .
+git commit -m "Initial commit"
+```
+
+### 6.2 Connect to GitHub
+
+```powershell
+git remote add origin https://github.com/A-AssiL/music-library.git
+git branch -M main
+git push -u origin main
+```
+
+### 6.3 Save your changes
+
+```powershell
+git add .
+git commit -m "Your message here"
+git push
+```
+
+### 6.4 Check status
+
+```powershell
+git status
+```
+
+### 6.5 See commit history
+
+```powershell
+git log --oneline -10
+```
+
+---
+
+## 7. Cleanup
+
+### 7.1 Delete Python cache files
+
+```powershell
+Remove-Item -Recurse -Force __pycache__
+```
+
+### 7.2 Delete PyInstaller build artifacts
+
+```powershell
+Remove-Item -Recurse -Force build
+Remove-Item -Recurse -Force dist
+```
+
+### 7.3 Delete temp downloads
+
+```powershell
+Remove-Item -Recurse -Force temp_downloads\*
+```
+
+### 7.4 Full clean rebuild
+
+```powershell
+Remove-Item -Recurse -Force build, dist, __pycache__
+pyinstaller MusicLibrary.spec --clean
+```
+
+### 7.5 Delete launcher log
+
+```powershell
+Remove-Item launcher.log
+```
+
+---
+
+## 8. Project paths
+
+| What | Path |
+|------|------|
+| Project root | `C:\Users\assil\Desktop\New folder (2)\music-library` |
+| Backend | `main.py` |
+| Launcher | `launcher.py` |
+| Build spec | `MusicLibrary.spec` |
+| Static files | `static\` |
+| Music library | `library\` |
+| Metadata | `library\metadata.json` |
+| Temp downloads | `temp_downloads\` |
+| Build output | `dist\MusicLibrary\` |
+| Exe | `dist\MusicLibrary\MusicLibrary.exe` |
+| Log file | `launcher.log` |
+| Python | `C:\Users\assil\AppData\Local\Programs\Python\Python312\python.exe` |
+| Pip packages | `C:\Users\assil\AppData\Local\Programs\Python\Python312\Lib\site-packages` |
+
+---
+
+## 🎯 The Three Commands You Actually Need
+
+For daily use:
+
+```powershell
+# 1. Update yt-dlp (once a week, or when downloads fail)
+pip install -U yt-dlp
+
+# 2. Rebuild the app after code changes
+pyinstaller MusicLibrary.spec --clean
+
+# 3. Run the app
+cd dist\MusicLibrary
+.\MusicLibrary.exe
+```
+
+---
+
+## ⚡ The Magic Command
+
+If YouTube downloads ever stop working, this fixes it 90% of the time:
+
+```powershell
+pip install -U yt-dlp
+```
+
+---
+
+**Last updated:** September 2026
+**Python:** 3.12
+**Tested on:** Windows 11
+```
+
+---
+
+احفظ الملف باسم `COMMANDS.md` في جذر المشروع بجانب `README.md`. الآن لديك مرجع كامل لكل الأوامر — يمكنك العودة إليه في أي وقت.
